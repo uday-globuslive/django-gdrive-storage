@@ -1,40 +1,89 @@
 {% extends 'ftp/base.html' %}
 
-{% block title %}Upload File - GDrive FTP{% endblock %}
+{% block title %}Upload Files - GDrive FTP{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8">
         <div class="card shadow">
             <div class="card-header bg-primary text-white">
-                <h4 class="mb-0"><i class="bi bi-cloud-upload"></i> Upload File</h4>
+                <h4 class="mb-0"><i class="bi bi-cloud-upload"></i> Upload Files or Create Folder</h4>
             </div>
             <div class="card-body p-4">
                 <form method="POST" enctype="multipart/form-data">
                     {% csrf_token %}
                     
-                    <div class="mb-3">
-                        <label for="{{ form.file.id_for_label }}" class="form-label">Choose File</label>
-                        {{ form.file }}
-                        {% if form.file.errors %}
-                            <div class="invalid-feedback d-block">
-                                {{ form.file.errors }}
-                            </div>
-                        {% endif %}
-                    </div>
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
                     
                     <div class="mb-3">
-                        <label for="{{ form.description.id_for_label }}" class="form-label">Description (Optional)</label>
-                        {{ form.description }}
-                        {% if form.description.errors %}
+                        <label for="{{ form.parent_folder.id_for_label }}" class="form-label">Select Destination Folder</label>
+                        {{ form.parent_folder }}
+                        {% if form.parent_folder.errors %}
                             <div class="invalid-feedback d-block">
-                                {{ form.description.errors }}
+                                {{ form.parent_folder.errors }}
                             </div>
                         {% endif %}
+                        <small class="form-text text-muted">
+                            Choose where to upload files or create a new folder. Leave blank for root folder.
+                        </small>
+                    </div>
+                    
+                    <ul class="nav nav-tabs mb-3" id="uploadTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="files-tab" data-bs-toggle="tab" data-bs-target="#files" type="button" role="tab" aria-controls="files" aria-selected="true">
+                                <i class="bi bi-file-earmark"></i> Upload Files
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="folder-tab" data-bs-toggle="tab" data-bs-target="#folder" type="button" role="tab" aria-controls="folder" aria-selected="false">
+                                <i class="bi bi-folder-plus"></i> Create Folder
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content" id="uploadTabsContent">
+                        <div class="tab-pane fade show active" id="files" role="tabpanel" aria-labelledby="files-tab">
+                            <div class="mb-3">
+                                <label for="{{ form.file.id_for_label }}" class="form-label">Choose Files</label>
+                                {{ form.file }}
+                                {% if form.file.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.file.errors }}
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted">You can select multiple files by holding Ctrl (Cmd on Mac) while selecting.</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.description.id_for_label }}" class="form-label">Description (Optional)</label>
+                                {{ form.description }}
+                                {% if form.description.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.description.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="tab-pane fade" id="folder" role="tabpanel" aria-labelledby="folder-tab">
+                            <div class="mb-3">
+                                <label for="{{ form.folder_name.id_for_label }}" class="form-label">Folder Name</label>
+                                {{ form.folder_name }}
+                                {% if form.folder_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.folder_name.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary">Upload</button>
+                        <button type="submit" class="btn btn-primary">Upload / Create</button>
                         <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
                     </div>
                 </form>

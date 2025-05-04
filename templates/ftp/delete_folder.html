@@ -1,0 +1,42 @@
+{% extends 'ftp/base.html' %}
+
+{% block title %}Delete Folder - GDrive FTP{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Delete Folder</h4>
+            </div>
+            <div class="card-body p-4 text-center">
+                <p class="lead">Are you sure you want to delete this folder and all its contents?</p>
+                <h5 class="mb-4">{{ folder.folder_name }}</h5>
+                
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i> 
+                    This action will permanently delete the folder and all files inside it, and cannot be undone.
+                </div>
+                
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <button type="submit" class="btn btn-danger me-md-2">
+                            <i class="bi bi-trash"></i> Delete Forever
+                        </button>
+                        {% if folder.parent_folder %}
+                            <a href="{% url 'folder_view' folder.parent_folder.id %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x"></i> Cancel
+                            </a>
+                        {% else %}
+                            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x"></i> Cancel
+                            </a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

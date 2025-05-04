@@ -5,56 +5,135 @@
 {% block content %}
 <div class="row mb-4">
     <div class="col-md-6">
-        <h2 class="mb-0"><i class="bi bi-folder2-open"></i> My Files</h2>
+        <h2 class="mb-0">
+            <i class="bi bi-folder2-open"></i>
+            {% if current_folder %}
+                {{ current_folder.folder_name }}
+            {% else %}
+                My Files
+            {% endif %}
+        </h2>
+        
+        {% if breadcrumbs %}
+            <nav aria-label="breadcrumb" class="mt-2">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Root</a></li>
+                    {% for folder in breadcrumbs %}
+                        {% if forloop.last %}
+                            <li class="breadcrumb-item active">{{ folder.folder_name }}</li>
+                        {% else %}
+                            <li class="breadcrumb-item"><a href="{% url 'folder_view' folder.id %}">{{ folder.folder_name }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+                </ol>
+            </nav>
+        {% endif %}
     </div>
     <div class="col-md-6 text-md-end">
-        <a href="{% url 'upload_file' %}" class="btn btn-success">
-            <i class="bi bi-cloud-upload"></i> Upload New File
+        <a href="{% url 'upload_file' %}" class="btn btn-success me-2">
+            <i class="bi bi-cloud-upload"></i> Upload Files
         </a>
     </div>
 </div>
 
-<div class="card shadow">
+<div class="card shadow mb-4">
     <div class="card-body">
-        {% if files %}
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>File Name</th>
-                            <th>Size</th>
-                            <th>Type</th>
-                            <th>Upload Date</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for file in files %}
+        {% if folders or files %}
+            {% if folders %}
+                <h5 class="mb-3"><i class="bi bi-folder2"></i> Folders</h5>
+                <div class="table-responsive mb-4">
+                    <table class="table table-hover">
+                        <thead class="table-light">
                             <tr>
-                                <td>{{ file.file_name }}</td>
-                                <td>{{ file.file_size|filesizeformat }}</td>
-                                <td>{{ file.file_type }}</td>
-                                <td>{{ file.upload_date|date:"M d, Y H:i" }}</td>
-                                <td class="file-actions">
-                                    <a href="{% url 'download_file' file.id %}" class="btn btn-sm btn-primary">
-                                        <i class="bi bi-download"></i> Download
-                                    </a>
-                                    <a href="{% url 'delete_file' file.id %}" class="btn btn-sm btn-danger">
-                                        <i class="bi bi-trash"></i> Delete
-                                    </a>
-                                </td>
+                                <th>Name</th>
+                                <th>Created</th>
+                                <th>Actions</th>
                             </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            {% for folder in folders %}
+                                <tr>
+                                    <td>
+                                        <i class="bi bi-folder text-warning"></i>
+                                        <a href="{% url 'folder_view' folder.id %}" class="ms-2 text-decoration-none">
+                                            {{ folder.folder_name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ folder.created_at|date:"M d, Y H:i" }}</td>
+                                    <td>
+                                        <a href="{% url 'delete_folder' folder.id %}" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+            
+            {% if files %}
+                <h5 class="mb-3"><i class="bi bi-file-earmark"></i> Files</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>File Name</th>
+                                <th>Size</th>
+                                <th>Type</th>
+                                <th>Uploaded</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for file in files %}
+                                <tr>
+                                    <td>
+                                        {% if file.file_type == 'image/jpeg' or file.file_type == 'image/png' or file.file_type == 'image/gif' %}
+                                            <i class="bi bi-file-earmark-image text-primary"></i>
+                                        {% elif file.file_type == 'application/pdf' %}
+                                            <i class="bi bi-file-earmark-pdf text-danger"></i>
+                                        {% elif file.file_type == 'text/plain' %}
+                                            <i class="bi bi-file-earmark-text text-info"></i>
+                                        {% elif 'spreadsheet' in file.file_type or 'excel' in file.file_type %}
+                                            <i class="bi bi-file-earmark-spreadsheet text-success"></i>
+                                        {% elif 'word' in file.file_type or 'document' in file.file_type %}
+                                            <i class="bi bi-file-earmark-word text-primary"></i>
+                                        {% else %}
+                                            <i class="bi bi-file-earmark text-secondary"></i>
+                                        {% endif %}
+                                        <span class="ms-2">{{ file.file_name }}</span>
+                                    </td>
+                                    <td>{{ file.file_size|filesizeformat }}</td>
+                                    <td>{{ file.file_type }}</td>
+                                    <td>{{ file.upload_date|date:"M d, Y H:i" }}</td>
+                                    <td class="file-actions">
+                                        <a href="{% url 'download_file' file.id %}" class="btn btn-sm btn-primary me-1">
+                                            <i class="bi bi-download"></i> Download
+                                        </a>
+                                        <a href="{% url 'delete_file' file.id %}" class="btn btn-sm btn-danger">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
         {% else %}
             <div class="text-center py-5">
                 <i class="bi bi-folder2-open display-1 text-muted"></i>
-                <h3 class="mt-3 text-muted">You don't have any files yet</h3>
-                <p class="lead text-muted">Upload your first file to get started</p>
+                <h3 class="mt-3 text-muted">
+                    {% if current_folder %}
+                        This folder is empty
+                    {% else %}
+                        You don't have any files or folders yet
+                    {% endif %}
+                </h3>
+                <p class="lead text-muted">Upload your first file or create a folder to get started</p>
                 <a href="{% url 'upload_file' %}" class="btn btn-primary">
-                    <i class="bi bi-cloud-upload"></i> Upload a File
+                    <i class="bi bi-cloud-upload"></i> Upload Files
                 </a>
             </div>
         {% endif %}

@@ -11,7 +11,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.models import User
 
 from .forms import UserRegisterForm, FileUploadForm
-from .models import UserProfile, FileEntry
+from .models import UserProfile, FileEntry, FolderEntry
 from .gdrive import GoogleDriveService
 
 def home(request):
@@ -36,7 +36,7 @@ def register(request):
     return render(request, 'ftp/register.html', {'form': form})
 
 @login_required
-def dashboard(request):
+def dashboard(request, folder_id=None):
     """User dashboard view."""
     user_profile = UserProfile.objects.get(user=request.user)
     
@@ -44,9 +44,36 @@ def dashboard(request):
         messages.warning(request, 'Your account is pending approval by an administrator.')
         return render(request, 'ftp/pending_approval.html')
     
-    files = FileEntry.objects.filter(user=request.user)
+    current_folder = None
+    breadcrumbs = []
     
-    return render(request, 'ftp/dashboard.html', {'files': files})
+    if folder_id:
+        try:
+            current_folder = FolderEntry.objects.get(id=folder_id, user=request.user)
+            
+            # Build breadcrumbs
+            temp_folder = current_folder
+            while temp_folder:
+                breadcrumbs.insert(0, temp_folder)
+                temp_folder = temp_folder.parent_folder
+                
+            # Get files and folders in the current folder
+            files = FileEntry.objects.filter(user=request.user, folder=current_folder)
+            folders = FolderEntry.objects.filter(user=request.user, parent_folder=current_folder)
+        except FolderEntry.DoesNotExist:
+            messages.error(request, 'Folder not found.')
+            return redirect('dashboard')
+    else:
+        # Root level - show files and folders with no parent
+        files = FileEntry.objects.filter(user=request.user, folder=None)
+        folders = FolderEntry.objects.filter(user=request.user, parent_folder=None)
+    
+    return render(request, 'ftp/dashboard.html', {
+        'files': files,
+        'folders': folders,
+        'current_folder': current_folder,
+        'breadcrumbs': breadcrumbs
+    })
 
 @login_required
 def upload_file(request):
@@ -57,62 +84,126 @@ def upload_file(request):
         messages.warning(request, 'Your account is pending approval by an administrator.')
         return redirect('dashboard')
     
+    # Get all folders for the user to populate the dropdown
+    user_folders = []
+    try:
+        folders = FolderEntry.objects.filter(user=request.user)
+        for folder in folders:
+            user_folders.append((folder.id, folder.get_path()))
+    except Exception as e:
+        print(f"Error fetching folders: {e}")
+    
     if request.method == 'POST':
-        form = FileUploadForm(request.POST, request.FILES)
+        form = FileUploadForm(request.POST, request.FILES, user_folders=user_folders)
         if form.is_valid():
-            uploaded_file = request.FILES['file']
-            description = form.cleaned_data['description']
+            # Initialize Google Drive service
+            drive_service = GoogleDriveService()
             
-            # Save file temporarily
-            with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-                for chunk in uploaded_file.chunks():
-                    temp_file.write(chunk)
-                temp_file_path = temp_file.name
-            
-            try:
-                # Initialize Google Drive service
-                drive_service = GoogleDriveService()
-                
-                # Create user folder if it doesn't exist
-                if not user_profile.drive_folder_id:
-                    folder_id = drive_service.create_user_folder(f"gdriveftp_{request.user.username}")
-                    if folder_id:
-                        user_profile.drive_folder_id = folder_id
-                        user_profile.save()
-                    else:
-                        messages.error(request, 'Error creating user folder in Google Drive.')
-                        return redirect('dashboard')
-                
-                # Upload file to Google Drive
-                file_id = drive_service.upload_file(
-                    temp_file_path,
-                    uploaded_file.name,
-                    user_profile.drive_folder_id
-                )
-                
-                if file_id:
-                    # Save file entry to database
-                    file_entry = FileEntry(
-                        user=request.user,
-                        file_name=uploaded_file.name,
-                        file_size=uploaded_file.size,
-                        file_type=uploaded_file.content_type,
-                        drive_file_id=file_id,
-                        description=description
-                    )
-                    file_entry.save()
-                    
-                    messages.success(request, f'File {uploaded_file.name} uploaded successfully!')
+            # Create user folder if it doesn't exist
+            if not user_profile.drive_folder_id:
+                folder_id = drive_service.create_user_folder(f"gdriveftp_{request.user.username}")
+                if folder_id:
+                    user_profile.drive_folder_id = folder_id
+                    user_profile.save()
                 else:
-                    messages.error(request, 'Error uploading file to Google Drive.')
-            finally:
-                # Delete temporary file
-                if os.path.exists(temp_file_path):
-                    os.unlink(temp_file_path)
+                    messages.error(request, 'Error creating user folder in Google Drive.')
+                    return redirect('dashboard')
+            
+            # Handle folder creation
+            folder_name = form.cleaned_data.get('folder_name')
+            parent_folder_id = form.cleaned_data.get('parent_folder')
+            
+            if folder_name:
+                # Determine parent folder in Drive
+                drive_parent_id = user_profile.drive_folder_id
+                db_parent = None
+                
+                if parent_folder_id:
+                    try:
+                        db_parent = FolderEntry.objects.get(id=parent_folder_id, user=request.user)
+                        drive_parent_id = db_parent.drive_folder_id
+                    except FolderEntry.DoesNotExist:
+                        messages.warning(request, 'Selected parent folder does not exist. Creating in root folder.')
+                
+                # Create folder in Drive
+                drive_folder_id = drive_service.create_subfolder(folder_name, drive_parent_id)
+                
+                if drive_folder_id:
+                    # Save folder entry to database
+                    folder_entry = FolderEntry(
+                        user=request.user,
+                        folder_name=folder_name,
+                        drive_folder_id=drive_folder_id,
+                        parent_folder=db_parent
+                    )
+                    folder_entry.save()
+                    messages.success(request, f'Folder {folder_name} created successfully!')
+                else:
+                    messages.error(request, 'Error creating folder in Google Drive.')
+            
+            # Handle file uploads
+            files = request.FILES.getlist('file')
+            
+            if files:
+                success_count = 0
+                error_count = 0
+                
+                # Determine target folder in Drive
+                upload_folder_id = user_profile.drive_folder_id
+                db_folder = None
+                
+                if parent_folder_id:
+                    try:
+                        db_folder = FolderEntry.objects.get(id=parent_folder_id, user=request.user)
+                        upload_folder_id = db_folder.drive_folder_id
+                    except FolderEntry.DoesNotExist:
+                        messages.warning(request, 'Selected folder does not exist. Uploading to root folder.')
+                
+                description = form.cleaned_data.get('description', '')
+                
+                for uploaded_file in files:
+                    # Save file temporarily
+                    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+                        for chunk in uploaded_file.chunks():
+                            temp_file.write(chunk)
+                        temp_file_path = temp_file.name
+                    
+                    try:
+                        # Upload file to Google Drive
+                        file_id = drive_service.upload_file(
+                            temp_file_path,
+                            uploaded_file.name,
+                            upload_folder_id
+                        )
+                        
+                        if file_id:
+                            # Save file entry to database
+                            file_entry = FileEntry(
+                                user=request.user,
+                                file_name=uploaded_file.name,
+                                file_size=uploaded_file.size,
+                                file_type=uploaded_file.content_type,
+                                drive_file_id=file_id,
+                                description=description,
+                                folder=db_folder
+                            )
+                            file_entry.save()
+                            success_count += 1
+                        else:
+                            error_count += 1
+                    finally:
+                        # Delete temporary file
+                        if os.path.exists(temp_file_path):
+                            os.unlink(temp_file_path)
+                
+                if success_count > 0:
+                    messages.success(request, f'Successfully uploaded {success_count} file(s).')
+                if error_count > 0:
+                    messages.error(request, f'Failed to upload {error_count} file(s).')
             
             return redirect('dashboard')
     else:
-        form = FileUploadForm()
+        form = FileUploadForm(user_folders=user_folders)
     
     return render(request, 'ftp/upload_file.html', {'form': form})
 
@@ -199,3 +290,26 @@ def revoke_user(request, user_id):
         return redirect('admin_dashboard')
     
     return render(request, 'ftp/revoke_user.html', {'user_profile': user_profile})
+
+@login_required
+def delete_folder(request, folder_id):
+    """Delete folder and its contents."""
+    folder = get_object_or_404(FolderEntry, id=folder_id, user=request.user)
+    parent_id = folder.parent_folder.id if folder.parent_folder else None
+    
+    if request.method == 'POST':
+        drive_service = GoogleDriveService()
+        
+        # Delete folder in Google Drive
+        if drive_service.delete_folder(folder.drive_folder_id):
+            # Delete all files and subfolders in database
+            folder.delete()
+            messages.success(request, f'Folder {folder.folder_name} deleted successfully!')
+        else:
+            messages.error(request, 'Error deleting folder from Google Drive.')
+        
+        if parent_id:
+            return redirect('folder_view', folder_id=parent_id)
+        return redirect('dashboard')
+    
+    return render(request, 'ftp/delete_folder.html', {'folder': folder})
