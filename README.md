@@ -22,7 +22,7 @@ GDriveFTP is a Django-based web application that provides an FTP-like file stora
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/gdriveftp.git
+git clone https://github.com/uday-globuslive/django-gdrive-storage.git
 cd gdriveftp
 ```
 
