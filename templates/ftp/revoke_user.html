@@ -1,0 +1,37 @@
+{% extends 'ftp/base.html' %}
+
+{% block title %}Revoke User - GDrive FTP{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header bg-warning">
+                <h4 class="mb-0 text-dark"><i class="bi bi-x-circle"></i> Revoke User Approval</h4>
+            </div>
+            <div class="card-body p-4 text-center">
+                <p class="lead">Are you sure you want to revoke approval for this user?</p>
+                <h5 class="mb-2">{{ user_profile.user.username }}</h5>
+                <p class="text-muted mb-4">{{ user_profile.user.email }}</p>
+                
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i> 
+                    This user will no longer be able to upload or download files.
+                </div>
+                
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <button type="submit" class="btn btn-warning me-md-2">
+                            <i class="bi bi-x-circle"></i> Revoke Approval
+                        </button>
+                        <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

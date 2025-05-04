@@ -1,0 +1,23 @@
+{% extends 'ftp/base.html' %}
+
+{% block title %}Pending Approval - GDrive FTP{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6 text-center">
+        <div class="card shadow">
+            <div class="card-body p-5">
+                <i class="bi bi-hourglass-split display-1 text-warning mb-3"></i>
+                <h2 class="mb-3">Account Pending Approval</h2>
+                <p class="lead mb-4">
+                    Your account is currently waiting for administrator approval. 
+                    You will be notified when your account is activated.
+                </p>
+                <div class="d-grid">
+                    <a href="{% url 'logout' %}" class="btn btn-outline-primary">Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

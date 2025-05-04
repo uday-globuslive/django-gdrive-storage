@@ -1,0 +1,60 @@
+{% extends 'ftp/base.html' %}
+
+{% block title %}GDrive FTP - Home{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8 text-center">
+        <div class="py-5">
+            <h1 class="display-4 mb-4">Welcome to GDrive FTP</h1>
+            <p class="lead mb-4">
+                A secure file storage solution backed by Google Drive. Upload, organize, and access your files from anywhere.
+            </p>
+            
+            <div class="mb-5">
+                {% if user.is_authenticated %}
+                    <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg px-4 me-2">
+                        <i class="bi bi-folder"></i> My Files
+                    </a>
+                    <a href="{% url 'upload_file' %}" class="btn btn-success btn-lg px-4">
+                        <i class="bi bi-cloud-upload"></i> Upload Files
+                    </a>
+                {% else %}
+                    <a href="{% url 'register' %}" class="btn btn-primary btn-lg px-4 me-2">Register</a>
+                    <a href="{% url 'login' %}" class="btn btn-outline-primary btn-lg px-4">Login</a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="row text-start mb-5">
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-cloud-check fs-1 text-primary mb-3"></i>
+                        <h3 class="h4 card-title">Secure Storage</h3>
+                        <p class="card-text">Your files are securely stored on Google Drive with encrypted transfer.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-folder-check fs-1 text-primary mb-3"></i>
+                        <h3 class="h4 card-title">Organized Files</h3>
+                        <p class="card-text">Each user gets a dedicated folder to keep their files organized.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-shield-check fs-1 text-primary mb-3"></i>
+                        <h3 class="h4 card-title">Admin Approval</h3>
+                        <p class="card-text">Every account requires admin verification for enhanced security.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
