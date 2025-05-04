@@ -19,6 +19,7 @@ urlpatterns = [
     path('download/<int:file_id>/', views.download_file, name='download_file'),
     path('delete/file/<int:file_id>/', views.delete_file, name='delete_file'),
     path('delete/folder/<int:folder_id>/', views.delete_folder, name='delete_folder'),
+    path('settings/', views.user_settings, name='user_settings'),
     
     # Admin views
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),

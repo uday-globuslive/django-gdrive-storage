@@ -82,8 +82,8 @@ class GoogleDriveService:
             logger.error(f"Error creating subfolder: {e}")
             return None
     
-    def upload_file(self, file_path, file_name, parent_folder_id):
-        """Upload a file to Google Drive and return its ID."""
+    def upload_file(self, file_path, file_name, parent_folder_id, share_with_email=None):
+        """Upload a file to Google Drive and return its ID. Optionally share with an email."""
         if not self.service:
             logger.error("Google Drive service not initialized")
             return None
@@ -113,9 +113,115 @@ class GoogleDriveService:
             
             file_id = file.get('id')
             logger.info(f"Uploaded file {file_name} with ID {file_id} to folder {parent_folder_id}")
+            
+            # Share the file if an email is provided
+            if share_with_email and file_id:
+                try:
+                    permission = {
+                        'type': 'user',
+                        'role': 'writer',
+                        'emailAddress': share_with_email
+                    }
+                    self.service.permissions().create(
+                        fileId=file_id,
+                        body=permission,
+                        fields='id',
+                        sendNotificationEmail=False
+                    ).execute()
+                    logger.info(f"Shared file {file_name} with {share_with_email}")
+                except Exception as e:
+                    logger.error(f"Error sharing file: {e}")
+            
             return file_id
         except Exception as e:
             logger.error(f"Error uploading file: {e}")
+            return None
+            
+    def create_user_folder(self, folder_name, share_with_email=None):
+        """Create a folder in Google Drive for a user and return its ID."""
+        if not self.service:
+            logger.error("Google Drive service not initialized")
+            return None
+        
+        try:
+            file_metadata = {
+                'name': folder_name,
+                'mimeType': 'application/vnd.google-apps.folder'
+            }
+            
+            folder = self.service.files().create(
+                body=file_metadata,
+                fields='id'
+            ).execute()
+            
+            folder_id = folder.get('id')
+            logger.info(f"Created user folder {folder_name} with ID {folder_id}")
+            
+            # Share the folder if an email is provided
+            if share_with_email and folder_id:
+                try:
+                    permission = {
+                        'type': 'user',
+                        'role': 'writer',
+                        'emailAddress': share_with_email
+                    }
+                    self.service.permissions().create(
+                        fileId=folder_id,
+                        body=permission,
+                        fields='id',
+                        sendNotificationEmail=False
+                    ).execute()
+                    logger.info(f"Shared folder {folder_name} with {share_with_email}")
+                except Exception as e:
+                    logger.error(f"Error sharing folder: {e}")
+            
+            return folder_id
+        except Exception as e:
+            logger.error(f"Error creating folder: {e}")
+            return None
+    
+    def create_subfolder(self, folder_name, parent_folder_id, share_with_email=None):
+        """Create a subfolder in Google Drive and return its ID."""
+        if not self.service:
+            logger.error("Google Drive service not initialized")
+            return None
+        
+        try:
+            file_metadata = {
+                'name': folder_name,
+                'mimeType': 'application/vnd.google-apps.folder',
+                'parents': [parent_folder_id]
+            }
+            
+            folder = self.service.files().create(
+                body=file_metadata,
+                fields='id'
+            ).execute()
+            
+            folder_id = folder.get('id')
+            logger.info(f"Created subfolder {folder_name} with ID {folder_id} in parent {parent_folder_id}")
+            
+            # Share the folder if an email is provided
+            if share_with_email and folder_id:
+                try:
+                    permission = {
+                        'type': 'user',
+                        'role': 'writer',
+                        'emailAddress': share_with_email
+                    }
+                    self.service.permissions().create(
+                        fileId=folder_id,
+                        body=permission,
+                        fields='id',
+                        sendNotificationEmail=False
+                    ).execute()
+                    logger.info(f"Shared folder {folder_name} with {share_with_email}")
+                except Exception as e:
+                    logger.error(f"Error sharing folder: {e}")
+            
+            return folder_id
+        except Exception as e:
+            logger.error(f"Error creating subfolder: {e}")
             return None
     
     def download_file(self, file_id):

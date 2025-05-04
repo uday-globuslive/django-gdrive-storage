@@ -101,7 +101,10 @@ def upload_file(request):
             
             # Create user folder if it doesn't exist
             if not user_profile.drive_folder_id:
-                folder_id = drive_service.create_user_folder(f"gdriveftp_{request.user.username}")
+                folder_id = drive_service.create_user_folder(
+                    f"gdriveftp_{request.user.username}",
+                    share_with_email=user_profile.share_email if user_profile.share_email else None
+                )
                 if folder_id:
                     user_profile.drive_folder_id = folder_id
                     user_profile.save()
@@ -126,7 +129,11 @@ def upload_file(request):
                         messages.warning(request, 'Selected parent folder does not exist. Creating in root folder.')
                 
                 # Create folder in Drive
-                drive_folder_id = drive_service.create_subfolder(folder_name, drive_parent_id)
+                drive_folder_id = drive_service.create_subfolder(
+                    folder_name, 
+                    drive_parent_id,
+                    share_with_email=user_profile.share_email if user_profile.share_email else None
+                )
                 
                 if drive_folder_id:
                     # Save folder entry to database
@@ -173,7 +180,8 @@ def upload_file(request):
                         file_id = drive_service.upload_file(
                             temp_file_path,
                             uploaded_file.name,
-                            upload_folder_id
+                            upload_folder_id,
+                            share_with_email=user_profile.share_email if user_profile.share_email else None
                         )
                         
                         if file_id:
@@ -313,3 +321,19 @@ def delete_folder(request, folder_id):
         return redirect('dashboard')
     
     return render(request, 'ftp/delete_folder.html', {'folder': folder})
+
+@login_required
+def user_settings(request):
+    """User settings view."""
+    user_profile = UserProfile.objects.get(user=request.user)
+    
+    if request.method == 'POST':
+        form = SettingsForm(request.POST, instance=user_profile)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Your settings have been updated successfully!')
+            return redirect('dashboard')
+    else:
+        form = SettingsForm(instance=user_profile)
+    
+    return render(request, 'ftp/settings.html', {'form': form})

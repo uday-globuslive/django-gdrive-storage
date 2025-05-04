@@ -6,6 +6,7 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     is_approved = models.BooleanField(default=False)
     drive_folder_id = models.CharField(max_length=255, blank=True, null=True)
+    share_email = models.EmailField(blank=True, null=True, help_text="Your personal Google email to share files with")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

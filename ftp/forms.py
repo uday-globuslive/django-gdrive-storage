@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
+from .models import UserProfile
 
 class UserLoginForm(AuthenticationForm):
     username = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Username'}))
@@ -67,3 +68,14 @@ class FileUploadForm(forms.Form):
         
         if not file and not folder_name:
             raise forms.ValidationError("You must either upload files or create a folder.")
+            
+class SettingsForm(forms.ModelForm):
+    share_email = forms.EmailField(
+        required=False,
+        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Your personal Google email'}),
+        help_text="Enter your personal Google email to share files with (so you can see them in your Drive)"
+    )
+    
+    class Meta:
+        model = UserProfile
+        fields = ['share_email']
